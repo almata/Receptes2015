@@ -7,33 +7,40 @@
 #    http://shiny.rstudio.com/
 #
 
-rm(list = ls())
 library(shiny)
 
-# Importació i filtrat de columnes
-df <- read.csv("Receptes2015.csv", sep = ";", stringsAsFactors = FALSE, header = FALSE)
-df <- df[-c(1, 2, 8, 9, 10, 11, 12, 13)]
-colnames(df) <- c("Residencia", "Sexe", "Edat", "CodiATC", "GrupATC", "Receptes")
+rm(list = ls())
 
-# Netejar dades
-sanitizeThousands <- function(x) {
-  ifelse(x == as.integer(x), x, x * 1000)
+importData <- function() {
+  # Importació i filtrat de columnes
+  df <- read.csv("Receptes2015.csv", sep = ";", stringsAsFactors = FALSE, header = FALSE)
+  df <- df[-c(1, 2, 8, 9, 10, 11, 12, 13)]
+  colnames(df) <- c("Residencia", "Sexe", "Edat", "CodiATC", "GrupATC", "Receptes")
+  
+  # Netejar dades
+  sanitizeThousands <- function(x) {
+    ifelse(x == as.integer(x), x, x * 1000)
+  }
+  df$Receptes <- sapply(df$Receptes, sanitizeThousands)
+  
+  # Esborrar files poc significatives
+  df <- df[-which(df$Residencia == "Altres"),]
+  df <- df[-which(df$Residencia == "Sense especificar"),]
+  df <- df[-which(df$GrupATC == "Sense especificar"),]
+  
+  # Afegir factors
+  df$Residencia <- as.factor(df$Residencia)
+  df$Sexe <- as.factor(df$Sexe)
+  df$Edat <- as.factor(df$Edat)
+  df$CodiATC <- as.factor(df$CodiATC)
+  df$GrupATC <- as.factor(df$GrupATC)
+  levels(df$Edat)[levels(df$Edat) == "85 anys o m\x8es"] <- "85 anys o més"
+  levels(df$Residencia) <- c("Pirineu", "Barcelona", "Camp Tarr.", "Cat.Cent.", "Girona", "Lleida", "Terr.Ebre")
+
+  df
 }
-df$Receptes <- sapply(df$Receptes, sanitizeThousands)
 
-# Esborrar files poc significatives
-df <- df[-which(df$Residencia == "Altres"),]
-df <- df[-which(df$Residencia == "Sense especificar"),]
-df <- df[-which(df$GrupATC == "Sense especificar"),]
-
-# Afegir factors
-df$Residencia <- as.factor(df$Residencia)
-df$Sexe <- as.factor(df$Sexe)
-df$Edat <- as.factor(df$Edat)
-df$CodiATC <- as.factor(df$CodiATC)
-df$GrupATC <- as.factor(df$GrupATC)
-levels(df$Edat)[levels(df$Edat) == "85 anys o m\x8es"] <- "85 anys o més"
-levels(df$Residencia) <- c("Pirineu", "Barcelona", "Camp Tarr.", "Cat.Cent.", "Girona", "Lleida", "Terr.Ebre")
+df <- importData()
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -46,7 +53,7 @@ ui <- fluidPage(
     sidebarPanel(
       selectInput("groupvar", 
                   "Agrupar per:",
-                  choices = c("Sexe", "Residencia", "Edat", "Fàrmac"),
+                  choices = c("Sexe", "Residència", "Edat", "Tipus de fàrmac"),
                   selected = c("Sexe"))
     ),
     
@@ -62,7 +69,9 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   output$barPlot <- renderPlot({
-    groupvar <- ifelse (input$groupvar == "Fàrmac", "CodiATC", input$groupvar)
+    groupvar <- input$groupvar
+    groupvar <- ifelse (groupvar == "Residència", "Residencia", groupvar)
+    groupvar <- ifelse (groupvar == "Tipus de fàrmac", "CodiATC", groupvar)
     
     data1 <- aggregate(df$Receptes ~ df[[which(dimnames(df)[[2]] == groupvar)]], FUN = sum)
     data2 <- t(data.matrix(data1[-1])) / 1000000 
@@ -73,7 +82,7 @@ server <- function(input, output) {
   })
   
   output$table <- renderTable({
-    if (input$groupvar == "Fàrmac") {
+    if (input$groupvar == "Tipus de fàrmac") {
       xlegend <- unique(df[-c(1, 2, 3, 6)])
       colnames(xlegend) <- c("Codi", "Descripció")
       xlegend
