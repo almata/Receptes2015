@@ -1,12 +1,3 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
 
 rm(list = ls())
@@ -48,7 +39,7 @@ ui <- fluidPage(
   # Application title
   titlePanel("Receptes facturades al Servei Català de la Salut el 2015"),
   
-  # Sidebar with a slider input for number of bins 
+  # Sidebar with a select input for the group-by variable 
   sidebarLayout(
     sidebarPanel(
       selectInput("groupvar", 
@@ -57,7 +48,7 @@ ui <- fluidPage(
                   selected = c("Sexe"))
     ),
     
-    # Show a plot of the generated distribution
+    # Show a plot of the grouped data
     mainPanel(
       plotOutput("barPlot"),
       tableOutput("table")
@@ -92,4 +83,3 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
-
